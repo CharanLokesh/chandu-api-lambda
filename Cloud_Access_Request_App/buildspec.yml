@@ -1,0 +1,35 @@
+version: 0.2
+env:
+  variables:
+    AWS_REGION: "us-east-1"  
+phases:
+  install:
+    runtime-versions:
+      terraform: 1.3.0  
+    commands:
+      - echo Installing Terraform...
+      - curl -LO https://releases.hashicorp.com/terraform/latest/terraform_latest_linux_amd64.zip
+      - unzip terraform_1.3.0_linux_amd64.zip
+      - sudo mv terraform /usr/local/bin/
+      - terraform --version  
+
+  pre_build:
+    commands:
+      - echo Setting up AWS credentials...
+      - aws sts get-caller-identity  
+      - echo Initializing Terraform...
+      - terraform init  
+
+  build:
+    commands:
+      - echo Running Terraform Plan...
+      - terraform plan -out=tfplan 
+  post_build:
+    commands:
+      - |
+        if [[ "$CODEBUILD_SOURCE_VERSION" == "refs/heads/main" ]]; then
+          echo "On main branch, applying Terraform plan..."
+          terraform apply -auto-approve tfplan  
+        else
+          echo "Only Terraform plan will be run on feature branch, Kindly raise a PR and get reviwed to apply chnages."
+        fi
